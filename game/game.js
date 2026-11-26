@@ -373,6 +373,247 @@
     ctx.drawImage(im, -w / 2, -h / 2, w, h);
     ctx.restore();
   }
+  // ---- in-scene jets, drawn in code (no cutout sprite) ------------------
+  // The old side-profile sprite sat flat and identical in both chase shots
+  // and read as pasted on. These two jets are rendered with the same
+  // golden-hour palette as the backgrounds (warm rim on the sun side, cool
+  // belly shade, warm haze veil), so no hard cutout edge can appear, and
+  // each shot gets its own pose: a banking rear-three-quarter turn into the
+  // ring (shot 2) vs a straight head-on gear-down approach (shot 3).
+  function jetPoly(pts, fill, stroke, lw) {
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+    for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 2; ctx.stroke(); }
+  }
+  function jetHaze(x0, y0, x1, y1, topA, botA) {
+    // warm golden-hour air over the airframe: blends the jet into the scene
+    var g = ctx.createLinearGradient(0, y0, 0, y1);
+    g.addColorStop(0, 'rgba(255,196,130,' + topA + ')');
+    g.addColorStop(0.55, 'rgba(255,214,165,' + (topA * 0.5) + ')');
+    g.addColorStop(1, 'rgba(150,110,70,' + botA + ')');
+    ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  }
+  function jetGlow(x, y, r, color, a) {
+    var g = ctx.createRadialGradient(x, y, 1, x, y, r);
+    g.addColorStop(0, color.replace('A', a));
+    g.addColorStop(1, color.replace('A', '0'));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  function drawJetBanking(cx, cy, s) {
+    // Shot 2: rear three-quarter view, banking left into the canyon ring.
+    // Nose points up-screen toward the ring; tail + afterburner face the
+    // viewer. Sun is upper-left, so the left edges carry the warm rim.
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s); ctx.rotate(-0.30);
+    // soft air shadow under the jet (depth, not a ground shadow)
+    ctx.save(); ctx.globalAlpha = 0.22; ctx.fillStyle = '#241207';
+    ctx.shadowColor = 'rgba(20,10,4,0.55)'; ctx.shadowBlur = 26;
+    ctx.beginPath(); ctx.ellipse(16, 122, 185, 24, 0.10, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    // afterburner: glow + flame cone behind the tail nozzle
+    jetGlow(0, 118, 78, 'rgba(255,150,60,A)', '0.30');
+    var fl = ctx.createRadialGradient(0, 116, 4, 0, 128, 54);
+    fl.addColorStop(0, 'rgba(255,252,230,0.95)'); fl.addColorStop(0.35, 'rgba(255,192,92,0.85)');
+    fl.addColorStop(0.7, 'rgba(255,110,40,0.45)'); fl.addColorStop(1, 'rgba(255,80,20,0)');
+    ctx.fillStyle = fl; ctx.beginPath(); ctx.moveTo(-15, 90);
+    ctx.quadraticCurveTo(-26, 138, 0, 166); ctx.quadraticCurveTo(26, 138, 15, 90);
+    ctx.closePath(); ctx.fill();
+    // main wings: left wing raised + foreshortened, right wing dropped + long
+    var wg = ctx.createLinearGradient(0, -60, 0, 96);
+    wg.addColorStop(0, '#aeb6bf'); wg.addColorStop(0.5, '#6d7780'); wg.addColorStop(1, '#383f47');
+    jetPoly([[-18, -8], [-118, -58], [-196, -34], [-152, 24], [-62, 30]], wg);
+    jetPoly([[18, -4], [150, 42], [232, 78], [172, 96], [60, 34]], wg);
+    // warm rim on the sun-side leading edges only; dark shade on trailing edges
+    ctx.strokeStyle = 'rgba(255,205,140,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-18, -8); ctx.lineTo(-118, -58); ctx.lineTo(-196, -34); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(18, -4); ctx.lineTo(150, 42); ctx.lineTo(232, 78); ctx.stroke();
+    ctx.strokeStyle = 'rgba(20,26,34,0.4)'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(-196, -34); ctx.lineTo(-152, 24); ctx.lineTo(-62, 30); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(232, 78); ctx.lineTo(172, 96); ctx.lineTo(60, 34); ctx.stroke();
+    // trailing-edge flap lines
+    ctx.strokeStyle = 'rgba(28,36,44,0.55)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-170, -18); ctx.lineTo(-140, 12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(196, 66); ctx.lineTo(168, 82); ctx.stroke();
+    // horizontal stabilators near the tail
+    var sg = ctx.createLinearGradient(0, 40, 0, 96);
+    sg.addColorStop(0, '#b9c1c9'); sg.addColorStop(1, '#525c66');
+    jetPoly([[-16, 46], [-94, 64], [-118, 84], [-40, 82]], sg);
+    jetPoly([[16, 48], [96, 72], [120, 92], [40, 84]], sg);
+    // fuselage: tapered body, nose up toward the ring, tail down at viewer
+    var fg = ctx.createLinearGradient(-26, 0, 26, 0);
+    fg.addColorStop(0, '#c2c9d0'); fg.addColorStop(0.42, '#7e8894');
+    fg.addColorStop(0.72, '#4c565f'); fg.addColorStop(1, '#2e363e');
+    ctx.beginPath(); ctx.moveTo(0, -112);
+    ctx.quadraticCurveTo(-13, -76, -20, -40); ctx.quadraticCurveTo(-26, 20, -24, 88);
+    ctx.quadraticCurveTo(0, 98, 24, 88);
+    ctx.quadraticCurveTo(26, 20, 20, -40); ctx.quadraticCurveTo(13, -76, 0, -112);
+    ctx.closePath(); ctx.fillStyle = fg; ctx.fill();
+    // belly shade + spine highlight
+    ctx.beginPath(); ctx.moveTo(-22, 10); ctx.quadraticCurveTo(-24, 60, -20, 88);
+    ctx.quadraticCurveTo(0, 96, 20, 88); ctx.quadraticCurveTo(24, 60, 22, 10);
+    ctx.quadraticCurveTo(0, 26, -22, 10); ctx.closePath();
+    ctx.fillStyle = 'rgba(18,24,32,0.28)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,235,200,0.5)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-11, -100); ctx.quadraticCurveTo(-18, -50, -20, 10); ctx.stroke();
+    // panel lines
+    ctx.strokeStyle = 'rgba(28,36,44,0.45)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-8, -84); ctx.lineTo(-10, 40); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10, -80); ctx.lineTo(12, 44); ctx.stroke();
+    // vertical stabilizer: swept fin hugging the rear spine
+    var vg = ctx.createLinearGradient(-12, 0, 16, 0);
+    vg.addColorStop(0, '#b4bdc6'); vg.addColorStop(1, '#333c45');
+    jetPoly([[-7, 20], [-4, -40], [10, -78], [14, -72], [10, 24]], vg, 'rgba(255,200,130,0.8)', 2);
+    // underwing pylons (fighter stores cue)
+    jetPoly([[-122, -22], [-108, -15], [-112, 2], [-126, -5]], '#3a444e');
+    jetPoly([[148, 50], [162, 57], [158, 72], [144, 65]], '#3a444e');
+    // wing-root shadow where the wings meet the fuselage
+    ctx.strokeStyle = 'rgba(20,26,34,0.45)'; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.moveTo(-18, -8); ctx.lineTo(-62, 30); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(18, -4); ctx.lineTo(60, 34); ctx.stroke();
+    // wing panel lines following the sweep
+    ctx.strokeStyle = 'rgba(28,36,44,0.4)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-60, -30); ctx.lineTo(-150, -8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(80, 20); ctx.lineTo(180, 62); ctx.stroke();
+    // tail nozzle
+    ctx.fillStyle = '#20262d'; ctx.beginPath(); ctx.ellipse(0, 92, 20, 10, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,190,110,0.9)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, 92, 20, 10, 0, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+    // bubble canopy near the nose, sun glint on its left
+    var cg = ctx.createLinearGradient(-8, -96, 8, -58);
+    cg.addColorStop(0, '#c8d8e4'); cg.addColorStop(0.5, '#54748f'); cg.addColorStop(1, '#182a3a');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(-1, -78, 8, 19, -0.06, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(30,40,50,0.7)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(-1, -78, 8, 19, -0.06, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-6, -92); ctx.lineTo(-2, -66); ctx.stroke();
+    // wingtip nav lights
+    jetGlow(-196, -34, 16, 'rgba(255,70,60,A)', '0.85');
+    ctx.fillStyle = '#ff5040'; ctx.beginPath(); ctx.arc(-196, -34, 4, 0, Math.PI * 2); ctx.fill();
+    jetGlow(232, 78, 16, 'rgba(80,255,140,A)', '0.85');
+    ctx.fillStyle = '#4dff8c'; ctx.beginPath(); ctx.arc(232, 78, 4, 0, Math.PI * 2); ctx.fill();
+    // warm rim along the sun-side (left) fuselage edge
+    ctx.strokeStyle = 'rgba(255,205,140,0.9)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(0, -112);
+    ctx.quadraticCurveTo(-13, -76, -20, -40); ctx.quadraticCurveTo(-26, 20, -24, 88); ctx.stroke();
+    // speed streaks trailing the wingtips and tail
+    ctx.strokeStyle = 'rgba(255,244,225,0.28)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-196, -34); ctx.lineTo(-262, -6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(232, 78); ctx.lineTo(292, 104); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8, 150); ctx.lineTo(-26, 196); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10, 152); ctx.lineTo(30, 198); ctx.stroke();
+    // golden-hour haze veil over the whole airframe
+    jetHaze(-270, -150, 300, 210, 0.14, 0.06);
+    ctx.fillStyle = 'rgba(255,175,95,0.05)'; ctx.fillRect(-270, -150, 570, 360);
+    ctx.restore();
+  }
+  function drawJetHeadOn(cx, cy, s) {
+    // Shot 3: straight head-on approach over the island strip. Nose points
+    // at the camera (bottom = near), tail recedes up toward the runway
+    // vanishing point. Gear down, flaps set, landing lights on: a descent,
+    // not a flyby. Sea-fog veil matches the strip's low-visibility air.
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(s, s);
+    // soft shadow on the runway below the jet: grounds it on the strip
+    var sh = ctx.createRadialGradient(6, 138, 4, 6, 138, 190);
+    sh.addColorStop(0, 'rgba(10,12,10,0.42)'); sh.addColorStop(1, 'rgba(10,12,10,0)');
+    ctx.fillStyle = sh; ctx.beginPath(); ctx.ellipse(6, 138, 190, 22, 0, 0, Math.PI * 2); ctx.fill();
+    // tail (far end, top): vertical fin + stabilators, small and hazy
+    var vg = ctx.createLinearGradient(-12, 0, 12, 0);
+    vg.addColorStop(0, '#b4bdc6'); vg.addColorStop(1, '#333c45');
+    jetPoly([[-11, -104], [-20, -146], [0, -158], [20, -146], [11, -104]], vg, 'rgba(255,200,130,0.7)', 1.5);
+    // light tip cap on the fin
+    jetPoly([[-6, -148], [0, -158], [6, -148], [4, -140], [-4, -140]], 'rgba(220,226,232,0.9)');
+    jetPoly([[-16, -104], [-96, -84], [-108, -62], [-24, -80]], vg);
+    jetPoly([[16, -104], [96, -84], [108, -62], [24, -80]], vg);
+    // main wings, symmetric, cropped delta, flaps set
+    var wg = ctx.createLinearGradient(0, -20, 0, 70);
+    wg.addColorStop(0, '#aeb6bf'); wg.addColorStop(0.55, '#6d7780'); wg.addColorStop(1, '#383f47');
+    jetPoly([[-34, -18], [-150, -6], [-216, 34], [-190, 62], [-70, 44], [-40, 18]], wg);
+    jetPoly([[34, -18], [150, -6], [216, 34], [190, 62], [70, 44], [40, 18]], wg);
+    // warm rim on the sun-side leading edges; dark shade on trailing edges
+    ctx.strokeStyle = 'rgba(255,205,140,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-34, -18); ctx.lineTo(-150, -6); ctx.lineTo(-216, 34); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(34, -18); ctx.lineTo(150, -6); ctx.lineTo(216, 34); ctx.stroke();
+    ctx.strokeStyle = 'rgba(20,26,34,0.35)'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(-216, 34); ctx.lineTo(-190, 62); ctx.lineTo(-70, 44); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(216, 34); ctx.lineTo(190, 62); ctx.lineTo(70, 44); ctx.stroke();
+    // flap lines + wingtip rails + wing-root shadow + panel lines
+    ctx.strokeStyle = 'rgba(28,36,44,0.55)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-150, 8); ctx.lineTo(-186, 44); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(150, 8); ctx.lineTo(186, 44); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-66, 30); ctx.lineTo(-160, 22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(66, 30); ctx.lineTo(160, 22); ctx.stroke();
+    ctx.strokeStyle = 'rgba(20,26,34,0.45)'; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.moveTo(-34, -18); ctx.lineTo(-40, 18); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(34, -18); ctx.lineTo(40, 18); ctx.stroke();
+    ctx.strokeStyle = 'rgba(28,36,44,0.4)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-90, -10); ctx.lineTo(-180, 28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(90, -10); ctx.lineTo(180, 28); ctx.stroke();
+    ctx.fillStyle = '#3a444e';
+    ctx.fillRect(-222, 26, 12, 8); ctx.fillRect(210, 26, 12, 8);
+    // underwing pylons
+    ctx.fillStyle = '#3a444e';
+    ctx.fillRect(-118, 14, 16, 7); ctx.fillRect(102, 14, 16, 7);
+    // fuselage: wide at the near nose (bottom), narrowing to the far tail
+    var fg = ctx.createLinearGradient(-44, 0, 44, 0);
+    fg.addColorStop(0, '#c6cdd4'); fg.addColorStop(0.35, '#828c97');
+    fg.addColorStop(0.7, '#4a545e'); fg.addColorStop(1, '#2f373f');
+    ctx.beginPath(); ctx.moveTo(0, 80);
+    ctx.quadraticCurveTo(-40, 62, -44, 30); ctx.quadraticCurveTo(-40, -40, -26, -96);
+    ctx.quadraticCurveTo(-18, -112, -14, -116); ctx.lineTo(14, -116);
+    ctx.quadraticCurveTo(18, -112, 26, -96); ctx.quadraticCurveTo(40, -40, 44, 30);
+    ctx.quadraticCurveTo(40, 62, 0, 80); ctx.closePath();
+    ctx.fillStyle = fg; ctx.fill();
+    // spine highlight down the sun-lit centre
+    var sp = ctx.createLinearGradient(0, -110, 0, 70);
+    sp.addColorStop(0, 'rgba(255,240,210,0.05)'); sp.addColorStop(0.5, 'rgba(255,240,210,0.30)');
+    sp.addColorStop(1, 'rgba(255,240,210,0.08)');
+    ctx.fillStyle = sp; ctx.fillRect(-5, -108, 10, 176);
+    // radome nose tip
+    ctx.fillStyle = '#7c858f'; ctx.beginPath(); ctx.ellipse(0, 64, 21, 14, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,200,130,0.85)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, 64, 21, 14, 0, Math.PI * 0.2, Math.PI * 0.8); ctx.stroke();
+    // bubble canopy above the nose
+    var cg = ctx.createLinearGradient(-13, -78, 13, -32);
+    cg.addColorStop(0, '#c8d8e4'); cg.addColorStop(0.5, '#54748f'); cg.addColorStop(1, '#182a3a');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(0, -56, 13, 23, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,50,60,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, -56, 13, 23, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-6, -72); ctx.lineTo(-1, -44); ctx.stroke();
+    // chin intake under the nose
+    jetPoly([[-12, 36], [12, 36], [8, 56], [-8, 56]], '#161c22', 'rgba(255,190,110,0.7)', 1.5);
+    // landing gear down: nose leg + two mains, wheels + doors
+    ctx.strokeStyle = '#1f262d'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(0, 78); ctx.lineTo(0, 110); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-52, 52); ctx.lineTo(-58, 104); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(52, 52); ctx.lineTo(58, 104); ctx.stroke();
+    ctx.fillStyle = '#14181d';
+    ctx.beginPath(); ctx.arc(0, 116, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-58, 110, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(58, 110, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#9aa4ae';
+    ctx.beginPath(); ctx.arc(0, 116, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-58, 110, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(58, 110, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(150,158,166,0.8)';
+    ctx.fillRect(-8, 82, 6, 26); ctx.fillRect(-66, 60, 6, 30); ctx.fillRect(60, 60, 6, 30);
+    // landing lights on the wing leading edges
+    jetGlow(-120, 4, 26, 'rgba(255,255,240,A)', '0.55');
+    jetGlow(120, 4, 26, 'rgba(255,255,240,A)', '0.55');
+    ctx.fillStyle = '#fffbe8';
+    ctx.beginPath(); ctx.arc(-120, 4, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(120, 4, 4, 0, Math.PI * 2); ctx.fill();
+    // wingtip nav lights
+    jetGlow(-216, 34, 15, 'rgba(255,70,60,A)', '0.85');
+    ctx.fillStyle = '#ff5040'; ctx.beginPath(); ctx.arc(-216, 34, 4, 0, Math.PI * 2); ctx.fill();
+    jetGlow(216, 34, 15, 'rgba(80,255,140,A)', '0.85');
+    ctx.fillStyle = '#4dff8c'; ctx.beginPath(); ctx.arc(216, 34, 4, 0, Math.PI * 2); ctx.fill();
+    // sea-fog veil over the airframe (strip leg is low-visibility air)
+    jetHaze(-240, -180, 240, 150, 0.11, 0.05);
+    ctx.fillStyle = 'rgba(255,175,95,0.05)'; ctx.fillRect(-240, -180, 480, 330);
+    ctx.fillStyle = 'rgba(230,238,244,0.06)'; ctx.fillRect(-240, -20, 480, 60);
+    ctx.restore();
+  }
   function weatherUnder(leg) {
     // fog / dusk veils go UNDER the runway overlay so the strip stays readable
     if (leg.fog > 0) {
@@ -625,7 +866,11 @@
       drawRing(next, F.px, F.py, clamp(1.6 - z, 0.35, 1.5), clamp(1.2 - z * 0.5, 0.35, 1));
     }
     if (S.view === 'chase') {
-      drawPlaneSprite(W / 2, H - 210, 500, F.bank);
+      // staged shots 2-3 use the in-scene jets (forward-facing, one pose
+      // each); live play keeps the original sprite untouched
+      if (SHOT === 2) drawJetBanking(W / 2, H - 225, 1.12);
+      else if (SHOT === 3) drawJetHeadOn(W / 2, H - 225, 1.08);
+      else drawPlaneSprite(W / 2, H - 210, 500, F.bank);
     }
     weatherOver(leg);
     drawHUD();
