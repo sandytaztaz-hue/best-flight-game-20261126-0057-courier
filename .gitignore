@@ -1,0 +1,11 @@
+node_modules/
+package.json
+package-lock.json
+raw-assets/
+game-assets/
+harness.mjs
+render-shots.mjs
+playtest.mjs
+process-assets.mjs
+out/
+sky-out/
