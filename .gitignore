@@ -9,3 +9,4 @@ playtest.mjs
 process-assets.mjs
 out/
 sky-out/
+process-photo-pass.mjs

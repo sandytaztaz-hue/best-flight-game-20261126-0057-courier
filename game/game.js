@@ -146,7 +146,7 @@
 
   // ---------- images ----------
   var IMG = {};
-  var IMG_LIST = ['bg-archipelago', 'bg-canyon', 'bg-dawnfog', 'bg-rain', 'bg-strip', 'bg-hangar', 'plane', 'parcels', 'cockpit-panel', 'face-bu-sari', 'face-pak-dedi', 'face-mira', 'face-joko', 'face-lina', 'face-halim'];
+  var IMG_LIST = ['bg-archipelago', 'bg-canyon', 'bg-dawnfog', 'bg-rain', 'bg-strip', 'bg-hangar', 'bg-canyon-jet', 'bg-strip-jet', 'plane', 'parcels', 'cockpit-panel', 'face-bu-sari', 'face-pak-dedi', 'face-mira', 'face-joko', 'face-lina', 'face-halim'];
   var imgLoaded = 0;
   IMG_LIST.forEach(function (name) {
     var im = new Image();
@@ -374,12 +374,11 @@
     ctx.restore();
   }
   // ---- in-scene jets, drawn in code (no cutout sprite) ------------------
-  // The old side-profile sprite sat flat and identical in both chase shots
-  // and read as pasted on. These two jets are rendered with the same
-  // golden-hour palette as the backgrounds (warm rim on the sun side, cool
-  // belly shade, warm haze veil), so no hard cutout edge can appear, and
-  // each shot gets its own pose: a banking rear-three-quarter turn into the
-  // ring (shot 2) vs a straight head-on gear-down approach (shot 3).
+  // SUPERSEDED by the photo pass: shots 2-3 now use photographic scene
+  // backgrounds with the jet already in the photo (bg-canyon-jet /
+  // bg-strip-jet), because these flat vector jets read less real than a
+  // photograph against the photo backgrounds. Kept unused, not deleted,
+  // so the diff stays surgical; drawFlight no longer calls them.
   function jetPoly(pts, fill, stroke, lw) {
     ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
     for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
@@ -845,10 +844,16 @@
   }
   function drawFlight() {
     var leg = LEGS[F.leg - 1];
-    drawBG(leg.bg);
+    // Photo pass (shots 2-3): the scene photo already contains the jet, so it
+    // IS the background — no vector jet is drawn on top of it. Live play
+    // (SHOT 0) keeps the original leg backgrounds untouched.
+    if (SHOT === 2) drawBG('bg-canyon-jet');
+    else if (SHOT === 3) drawBG('bg-strip-jet');
+    else drawBG(leg.bg);
     weatherUnder(leg);
-    // runway strip visible on approach legs
-    if (F.progress > 82) {
+    // runway strip visible on approach legs — not for staged shot 3, where
+    // the photo itself is the island strip (an overlay would wash it out)
+    if (F.progress > 82 && SHOT !== 3) {
       var im = IMG['bg-strip'];
       if (im && im.naturalWidth) {
         ctx.save(); ctx.globalAlpha = clamp((F.progress - 82) / 18, 0, 1) * 0.85;
@@ -866,10 +871,10 @@
       drawRing(next, F.px, F.py, clamp(1.6 - z, 0.35, 1.5), clamp(1.2 - z * 0.5, 0.35, 1));
     }
     if (S.view === 'chase') {
-      // staged shots 2-3 use the in-scene jets (forward-facing, one pose
-      // each); live play keeps the original sprite untouched
-      if (SHOT === 2) drawJetBanking(W / 2, H - 225, 1.12);
-      else if (SHOT === 3) drawJetHeadOn(W / 2, H - 225, 1.08);
+      // staged shots 2-3: the jet is already in the photo — drawing the old
+      // vector jet on top would put a flat drawing over a photograph, so
+      // draw nothing here; live play keeps the original sprite untouched
+      if (SHOT === 2 || SHOT === 3) { /* jet in photo */ }
       else drawPlaneSprite(W / 2, H - 210, 500, F.bank);
     }
     weatherOver(leg);
