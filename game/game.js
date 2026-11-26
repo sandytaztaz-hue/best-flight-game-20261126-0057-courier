@@ -38,12 +38,12 @@
 
   // ---------- data ----------
   var PEOPLE = [
-    { name: 'Bu Sari', role: 'Fish market · Kenari', mood: 'Happy', color: '#e2703a', skin: '#c98d5f', dialog: 'Fresh catch today, Raka! Fly it fast, still flapping!' },
-    { name: 'Pak Dedi', role: 'Coffee farmer · Highlands', mood: 'Proud', color: '#7a5c2e', skin: '#a97c50', dialog: 'My beans fly first class. No shaking, ya?' },
-    { name: 'Mira', role: 'Clinic nurse · Karang', mood: 'Worried', color: '#3a7d8c', skin: '#d9a06b', dialog: 'The medicine must arrive before dark. Please.' },
-    { name: 'Joko', role: 'Postmaster · Kenari', mood: 'Busy', color: '#4a6b3a', skin: '#b98a5e', dialog: 'Forty letters, one parcel, zero excuses!' },
-    { name: 'Lina', role: 'School teacher · Karang', mood: 'Bright', color: '#8c4a7d', skin: '#e0aa72', dialog: 'The kids drew your plane again. It flies!' },
-    { name: 'Insp. Halim', role: 'Aviation inspector · VIP', mood: 'Strict', color: '#333a44', skin: '#c08a5e', dialog: 'I grade every ring, pilot. Impress me.' },
+    { name: 'Bu Sari', role: 'Fish market · Kenari', mood: 'Happy', color: '#e2703a', skin: '#c98d5f', face: 'face-bu-sari', dialog: 'Fresh catch today, Raka! Fly it fast, still flapping!' },
+    { name: 'Pak Dedi', role: 'Coffee farmer · Highlands', mood: 'Proud', color: '#7a5c2e', skin: '#a97c50', face: 'face-pak-dedi', dialog: 'My beans fly first class. No shaking, ya?' },
+    { name: 'Mira', role: 'Clinic nurse · Karang', mood: 'Worried', color: '#3a7d8c', skin: '#d9a06b', face: 'face-mira', dialog: 'The medicine must arrive before dark. Please.' },
+    { name: 'Joko', role: 'Postmaster · Kenari', mood: 'Busy', color: '#4a6b3a', skin: '#b98a5e', face: 'face-joko', dialog: 'Forty letters, one parcel, zero excuses!' },
+    { name: 'Lina', role: 'School teacher · Karang', mood: 'Bright', color: '#8c4a7d', skin: '#e0aa72', face: 'face-lina', dialog: 'The kids drew your plane again. It flies!' },
+    { name: 'Insp. Halim', role: 'Aviation inspector · VIP', mood: 'Strict', color: '#333a44', skin: '#c08a5e', face: 'face-halim', dialog: 'I grade every ring, pilot. Impress me.' },
   ];
   var LEGS = [
     { n: 1, name: 'Kenari → Karang', sub: 'Sunset hop · medicine run', bg: 'bg-archipelago', weather: 'golden', cargo: 3, cargoName: 'Medicine + post', pay: 90, rings: 6, fog: 0 },
@@ -146,13 +146,13 @@
 
   // ---------- images ----------
   var IMG = {};
-  var IMG_LIST = ['bg-archipelago', 'bg-canyon', 'bg-dawnfog', 'bg-rain', 'bg-strip', 'bg-hangar', 'plane', 'parcels'];
+  var IMG_LIST = ['bg-archipelago', 'bg-canyon', 'bg-dawnfog', 'bg-rain', 'bg-strip', 'bg-hangar', 'plane', 'parcels', 'cockpit-panel', 'face-bu-sari', 'face-pak-dedi', 'face-mira', 'face-joko', 'face-lina', 'face-halim'];
   var imgLoaded = 0;
   IMG_LIST.forEach(function (name) {
     var im = new Image();
     im.onload = function () { imgLoaded++; };
     im.onerror = function () { imgLoaded++; };
-    im.src = 'assets/' + name + (name.indexOf('bg-') === 0 ? '.jpg' : '.png');
+    im.src = 'assets/' + name + ((name.indexOf('bg-') === 0 || name === 'cockpit-panel') ? '.jpg' : '.png');
     IMG[name] = im;
   });
   function imagesReady() { return imgLoaded >= IMG_LIST.length; }
@@ -396,12 +396,21 @@
     }
   }
   function drawCockpit() {
-    // windshield frame + dashboard with lit instruments
+    // windshield frame + photographic instrument panel (Falcon-style lit gauges).
+    // Called BEFORE the ring is drawn, so the glowing ring + its label stay on top
+    // of the dashboard instead of being painted over by it.
     ctx.fillStyle = 'rgba(10,12,16,0.92)';
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 150); ctx.lineTo(180, 210); ctx.lineTo(0, H); ctx.lineTo(0, 0); ctx.fill();
     ctx.beginPath(); ctx.moveTo(W, 0); ctx.lineTo(W, 150); ctx.lineTo(W - 180, 210); ctx.lineTo(W, H); ctx.lineTo(W, 0); ctx.fill();
     ctx.fillRect(0, 0, W, 26);
-    // dashboard
+    // photographic dashboard with lit gauges (bottom 320 px of the frame)
+    var pim = IMG['cockpit-panel'];
+    if (pim && pim.naturalWidth) {
+      ctx.drawImage(pim, 0, H - 320, W, 320);
+      ctx.fillStyle = '#ffb347'; ctx.fillRect(0, H - 320, W, 4);
+      return;
+    }
+    // fallback if the panel image failed to load: dark dashboard + drawn dials
     var dy = H - 190;
     ctx.fillStyle = '#141a20'; ctx.fillRect(0, dy, W, 190);
     ctx.fillStyle = '#ffb347'; ctx.fillRect(0, dy, W, 4);
@@ -423,26 +432,41 @@
       text(dials[i][0], cx, cy - 68, 13, '#ffb347', 'center', true);
       text(dials[i][1], cx, cy + 84, 17, '#ffffff', 'center', true);
     }
-    // yoke removed — it crossed the FUEL dial face; the 6 lit dials carry the panel
   }
 
   // ---------- people portraits (drawn, no emoji) ----------
   function drawPerson(p, x, y, w, h, showDialog) {
     panel(x, y, w, h, 'rgba(14,18,24,0.92)', 'rgba(255,196,110,0.5)');
-    // portrait: head + shoulders
+    // portrait: photo headshot in a circle when one exists, else the drawn face
     var cx = x + 44, cy = y + 44;
-    ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = p.skin; ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#1c1410';
-    ctx.beginPath(); ctx.arc(cx, cy - 8, 21, Math.PI, 0); ctx.fill(); // hair
-    ctx.fillStyle = '#1c1410';
-    ctx.beginPath(); ctx.arc(cx - 8, cy - 2, 2.4, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx + 8, cy - 2, 2.4, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#7a4a30'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(cx, cy + 4, 7, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
-    // shoulders
-    ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.moveTo(cx - 28, y + 86); ctx.quadraticCurveTo(cx, y + 62, cx + 28, y + 86); ctx.lineTo(cx + 28, y + 92); ctx.lineTo(cx - 28, y + 92); ctx.closePath(); ctx.fill();
+    var pim = p.face ? IMG[p.face] : null;
+    if (pim && pim.naturalWidth) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.clip();
+      var iw = pim.naturalWidth, ih = pim.naturalHeight;
+      // top-anchored cover fit: every portrait has the face in its upper half,
+      // so pin the image top just above the circle top and let the shoulders
+      // overflow below (clipped) — a tall portrait (long hair) keeps its face
+      var s = 68 / iw;
+      var dw = iw * s, dh = ih * s;
+      ctx.drawImage(pim, cx - dw / 2, cy - 34, dw, dh);
+      ctx.restore();
+      ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,196,110,0.65)'; ctx.lineWidth = 2; ctx.stroke();
+    } else {
+      ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = p.skin; ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1c1410';
+      ctx.beginPath(); ctx.arc(cx, cy - 8, 21, Math.PI, 0); ctx.fill(); // hair
+      ctx.fillStyle = '#1c1410';
+      ctx.beginPath(); ctx.arc(cx - 8, cy - 2, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 8, cy - 2, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#7a4a30'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, cy + 4, 7, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+      // shoulders
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.moveTo(cx - 28, y + 86); ctx.quadraticCurveTo(cx, y + 62, cx + 28, y + 86); ctx.lineTo(cx + 28, y + 92); ctx.lineTo(cx - 28, y + 92); ctx.closePath(); ctx.fill();
+    }
     text(p.name, x + 84, y + 30, 16, '#fff', 'left', true);
     text(p.role, x + 84, y + 50, 11.5, '#ffb347', 'left');
     text('Mood: ' + p.mood, x + 84, y + 68, 11.5, '#cfe0ea', 'left');
@@ -590,6 +614,9 @@
         ctx.drawImage(im, 0, 0, W, H); ctx.restore();
       }
     }
+    // cockpit panel goes UNDER the ring: the photo dashboard owns the bottom
+    // of the frame, the glowing ring + its label must stay on top of it
+    if (S.view === 'cockpit') drawCockpit();
     // next ring ahead (nearest unpassed)
     var next = null;
     for (var i = 0; i < F.rings.length; i++) if (F.rings[i].hit === null) { next = F.rings[i]; break; }
@@ -598,9 +625,7 @@
       drawRing(next, F.px, F.py, clamp(1.6 - z, 0.35, 1.5), clamp(1.2 - z * 0.5, 0.35, 1));
     }
     if (S.view === 'chase') {
-      drawPlaneSprite(W / 2, H - 210, 430, F.bank);
-    } else {
-      drawCockpit();
+      drawPlaneSprite(W / 2, H - 210, 500, F.bank);
     }
     weatherOver(leg);
     drawHUD();
@@ -692,7 +717,7 @@
       startLeg(1); F.progress = 34; F.px = 0.05; F.py = -0.05; F.fuel = 78; F.score = 340; F.combo = 1.75; F.comboHits = 3; F.hits = 3; F.speed = 132; F.alt = 1480; F.msg = 'RING! +175 · COMBO x1.75'; F.msgT = 9; markRings(3);
     } else if (n === 2) {
       S.screen = 'flight'; S.view = 'chase';
-      startLeg(2); F.progress = 52; F.px = -0.28; F.py = 0.12; F.bank = -0.3; F.fuel = 64; F.score = 520; F.combo = 2.0; F.comboHits = 4; F.hits = 4; F.speed = 146; F.alt = 2100; F.msg = 'RING! +200 · COMBO x2.00'; F.msgT = 9; markRings(4);
+      startLeg(2); F.progress = 52; F.px = -0.28; F.py = 0.12; F.bank = 0; F.fuel = 64; F.score = 520; F.combo = 2.0; F.comboHits = 4; F.hits = 4; F.speed = 146; F.alt = 2100; F.msg = 'RING! +200 · COMBO x2.00'; F.msgT = 9; markRings(4);
     } else if (n === 3) {
       S.screen = 'flight'; S.view = 'chase';
       startLeg(3); F.progress = 93; F.px = 0.1; F.py = 0.05; F.fuel = 41; F.score = 690; F.combo = 1.5; F.comboHits = 2; F.hits = 5; F.speed = 118; F.alt = 900; F.msg = 'RUNWAY AHEAD — final ring!'; F.msgT = 9; markRings(5);
